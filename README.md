@@ -70,38 +70,7 @@ SELECT * FROM transcricoes;
 
 ---
 
-## 🐍 Glue Job em PySpark (opcional)
 
-```python
-from awsglue.context import GlueContext
-from pyspark.context import SparkContext
-from pyspark.sql.functions import col, regexp_extract, when
-
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-
-df = glueContext.create_dynamic_frame.from_catalog(
-    database="callcenter_db",
-    table_name="transcricao_transcricoes"
-).toDF()
-
-df_transformado = df.withColumn(
-    "transcript", col("results.transcripts")[0]["transcript"]
-).withColumn(
-    "cpf", regexp_extract(col("transcript"), r"(?i)(?:cpf)\D*(\d{11})", 1)
-).withColumn(
-    "protocolo", regexp_extract(col("transcript"), r"\b(\d{12})\b", 1)
-).withColumn(
-    "motivo", when(col("transcript").contains("cancelar meu título"), "Cancelar título de capitalização")
-              .when(col("transcript").contains("consórcio"), "Consórcio")
-              .otherwise("Outro")
-)
-
-df_transformado.write.mode("overwrite").parquet("s3://callcenter-transcricoes/curated/")
-```
-
----
 
 ## 🧾 Requisitos (para execução local)
 
