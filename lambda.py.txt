@@ -1,0 +1,49 @@
+import boto3
+import uuid
+
+s3 = boto3.client('s3')
+transcribe = boto3.client('transcribe')
+
+BUCKET_NAME = 'meu-callcenter-audios'
+OUTPUT_BUCKET_NAME = 'meu-callcenter-transcricoes'
+INPUT_PREFIX = 'audios/'
+
+def lambda_handler(event, context):
+    response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=INPUT_PREFIX)
+
+    if 'Contents' not in response:
+        print("Nenhum áudio encontrado.")
+        return {'status': 'sem arquivos'}
+
+    for obj in response['Contents']:
+        key = obj['Key']
+
+        if not key.lower().endswith(('.mp3', '.wav')):
+            print(f"Ignorando arquivo: {key}")
+            continue
+
+        job_name = f"transcricao-{uuid.uuid4()}"
+        media_uri = f's3://{BUCKET_NAME}/{key}'
+
+        # Verifica se o job já existe (só por segurança, não é necessário se o nome é sempre único)
+        try:
+            transcribe.get_transcription_job(TranscriptionJobName=job_name)
+            print(f"Job {job_name} já existe.")
+            continue
+        except transcribe.exceptions.BadRequestException:
+            pass  # Job ainda não existe
+
+        print(f"Iniciando transcrição: {key} → Job: {job_name}")
+
+        try:
+            transcribe.start_transcription_job(
+                TranscriptionJobName=job_name,
+                LanguageCode='pt-BR',
+                MediaFormat=key.split('.')[-1].lower(),
+                Media={'MediaFileUri': media_uri},
+                OutputBucketName=OUTPUT_BUCKET_NAME  # <-- apenas isso
+            )
+        except Exception as e:
+            print(f"Erro ao iniciar transcrição para {key}: {e}")
+
+    return {'status': 'finalizado'}
