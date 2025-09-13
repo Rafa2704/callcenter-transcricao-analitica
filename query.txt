@@ -1,0 +1,30 @@
+WITH transcricoes AS (
+  SELECT
+    jobname,
+    accountid,
+    status,
+    r.transcript AS transcript
+  FROM
+    callcenter_db.transcricao_transcricoes
+  CROSS JOIN UNNEST(results.transcripts) AS t (r)
+)
+
+SELECT
+  transcript,
+  -- Extrai o CPF (formato com pontos e hífen ou só números)
+  REGEXP_EXTRACT(transcript, '(?i)(?:cpf)\\D*(\\d{11})') AS cpf_extraido,
+  -- Extrai protocolo (12 dígitos)
+  REGEXP_EXTRACT(transcript, '\\b\\d{12}\\b') AS protocolo,
+  -- Extrai motivo da ligação baseado em palavras-chave
+  CASE
+    WHEN transcript LIKE '%cancelar meu título%' THEN 'Cancelar título de capitalização'
+    WHEN transcript LIKE '%cancelar%' THEN 'Cancelamento'
+    WHEN transcript LIKE '%consórcio%' THEN 'Consórcio'
+    WHEN transcript LIKE '%seguro%' THEN 'Seguros'
+    WHEN transcript LIKE '%plano odontológico%' THEN 'Plano odontológico'
+    ELSE 'Outro'
+  END AS motivo_contato
+
+FROM transcricoes
+
+
