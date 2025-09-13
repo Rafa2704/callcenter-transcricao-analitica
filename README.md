@@ -11,7 +11,7 @@ Projeto que automatiza a extração de dados relevantes a partir de transcriçõ
 3. ☁️ Esses arquivos `.json` são salvos em uma pasta no S3 (ex: `s3://callcenter-transcricoes/json/`).
 4. 🔍 Um **AWS Glue Crawler** escaneia os arquivos e cria uma tabela no **Glue Data Catalog**, disponibilizando os dados para consulta no **Amazon Athena**.
 5. 📊 A partir do Athena, executamos queries SQL que:
-   - Extraem o **CPF informado**
+   - Extraem o **CODIGO_CLIENTE informado**
    - Capturam o **número de protocolo**
    - Classificam o **motivo da ligação** com base em palavras-chave
 
@@ -32,7 +32,7 @@ Usuário → Áudio → [S3 Bucket: raw/] → Transcribe → [S3 Bucket: json/]
 
 ```text
 "Oi. Você ligou para o serviço de atendimento ao Consumidor SAC da CNP Seguradora. (...)
-Eu quero cancelar meu título de capitalização. Certo. A senhora me confirma por favor o seu CPF. 016.061.03547. (...)
+Eu quero cancelar meu título de capitalização. Certo. A senhora me confirma por favor o seu CODIGO_CLIENTE. XXXXXXX. (...)
 A sua ligação gerou o protocolo 250848252064."
 ```
 
@@ -48,7 +48,7 @@ WITH transcricoes AS (
     r.transcript,
     
     -- Extrai CPF após a palavra "CPF"
-    REGEXP_EXTRACT(r.transcript, '(?i)(?:cpf)\D*(\d{11})') AS cpf_extraido,
+    REGEXP_EXTRACT(r.transcript, '(?i)(?:CODIGO_CLIENTE)\D*(\d{11})') AS codigo_cliente,
 
     -- Extrai número de protocolo (12 dígitos)
     REGEXP_EXTRACT(r.transcript, '\b(\d{12})\b') AS protocolo,
@@ -83,9 +83,9 @@ boto3
 
 ## 📊 Exemplo de Resultado
 
-| jobname                            | cpf_extraido | protocolo     | motivo_contato                    |
+| jobname                            | codigo_cliente | protocolo     | motivo_contato                    |
 |------------------------------------|--------------|---------------|-----------------------------------|
-| transcricao-9d9e9826-xxxxxxx       | 01606103547  | 250848252064  | Cancelar título de capitalização |
+| transcricao-9d9e9826-xxxxxxx       | xxxxxxxxxxxxx  | 250848252064  | Cancelar título de capitalização |
 
 ---
 
